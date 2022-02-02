@@ -40,7 +40,16 @@ class Softmax(object):
     #   set margins, and then normalize the loss by the number of 
     #   training examples.)
     # ================================================================ #
-    pass
+    a = X.dot(self.W.T)
+    
+    i = 0
+    for row in a:   
+        
+        row -= np.max(row) #  To avoid overflow 
+        loss += - np.log( np.exp(row[y[i]]) /sum(np.exp(row)) )  #softmax function
+        i = i+1   
+        
+    loss = loss/y.shape[0]
     
     # ================================================================ #
     # END YOUR CODE HERE
@@ -65,7 +74,19 @@ class Softmax(object):
     #   Calculate the softmax loss and the gradient. Store the gradient
     #   as the variable grad.
     # ================================================================ #
-    pass
+    a = self.W.dot(X.T) 
+    soft_score = np.zeros_like(np.exp(a))
+    
+    for j in range(soft_score.shape[1]):
+        soft_score[:,j] = np.exp(a)[:,j]/np.sum(np.exp(a)[:,j])
+        
+    soft_score[y, range(soft_score.shape[1])] =  soft_score[y, range(soft_score.shape[1])] - 1 
+    dLbyda = soft_score
+
+    # gradient and loss
+    grad = np.dot(dLbyda,X)
+    grad =  grad/y.shape[0]
+    loss = self.loss(X, y)
     
     # ================================================================ #
     # END YOUR CODE HERE
@@ -106,7 +127,26 @@ class Softmax(object):
     # YOUR CODE HERE:
     #   Calculate the softmax loss and gradient WITHOUT any for loops.
     # ================================================================ #
-    pass
+    a = X.dot(self.W.T) #  N xC 
+    a = (a.T - np.amax(a,axis = 1)).T
+    # print(a)
+
+    # print(y.shape)
+    num_train = y.shape[0]
+    soft_score = np.zeros_like(np.exp(a))
+
+    ## The loss 
+    soft_score = np.exp(a) / np.sum(np.exp(a), axis = 1, keepdims = True) 
+    loss = np.sum(  -np.log(np.exp(a)[np.arange(a.shape[0]), y] / np.sum(np.exp(a), axis = 1)) )
+    
+    
+    soft_score[range(num_train),y] = soft_score[range(num_train),y] - 1 #gradient 
+    dLbyda = soft_score
+    grad = dLbyda.T.dot(X) 
+
+    #normalize
+    grad = grad/num_train 
+    loss = loss/num_train 
     
     # ================================================================ #
     # END YOUR CODE HERE
@@ -154,7 +194,9 @@ class Softmax(object):
       #   in the dataset.  Use np.random.choice.  It's okay to sample with
       #   replacement.
       # ================================================================ #
-      pass
+      index = np.random.choice(np.arange(num_train), batch_size)
+      X_batch = X[index]
+      y_batch = y[index]
       # ================================================================ #
       # END YOUR CODE HERE
       # ================================================================ #
@@ -167,7 +209,7 @@ class Softmax(object):
       # YOUR CODE HERE:
       #   Update the parameters, self.W, with a gradient step 
       # ================================================================ #
-      pass
+      self.W = self.W - grad* learning_rate
 
       # ================================================================ #
       # END YOUR CODE HERE
@@ -193,7 +235,8 @@ class Softmax(object):
     # YOUR CODE HERE:
     #   Predict the labels given the training data.
     # ================================================================ #
-    pass
+    y_pred = np.argmax(X.dot(self.W.T),axis=1)
+
     # ================================================================ #
     # END YOUR CODE HERE
     # ================================================================ #
