@@ -30,7 +30,10 @@ def affine_forward(x, w, b):
   #   assignments.
   # ================================================================ #
 
-  pass
+  x1 = x.reshape(x.shape[0], -1)
+  
+  out =np.dot(x1,w) + b
+  
 
   # ================================================================ #
   # END YOUR CODE HERE
@@ -68,7 +71,13 @@ def affine_backward(dout, cache):
   # dw should be D x M; it relates to dout through multiplication with x, which is N x D after reshaping
   # db should be M; it is just the sum over dout examples
 
-  pass
+  x1 = x.reshape(x.shape[0], -1) 
+  dw = np.dot(x1.T,dout)
+  dx = np.dot(dout,w.T)
+  dx = dx.reshape(x.shape)
+  db = np.sum(dout,axis=0)
+  
+  
 
   # ================================================================ #
   # END YOUR CODE HERE
@@ -92,7 +101,8 @@ def relu_forward(x):
   #   Implement the ReLU forward pass.
   # ================================================================ #
 
-  pass
+  reLu = lambda x: np.maximum(x, 0)
+  out  = reLu(x)
   # ================================================================ #
   # END YOUR CODE HERE
   # ================================================================ #
@@ -120,7 +130,8 @@ def relu_backward(dout, cache):
   # ================================================================ #
 
   # ReLU directs linearly to those > 0
-  pass
+  x1 = x.reshape(x.shape[0], -1)
+  dx = dout * (x1 >= 0)
     
   # ================================================================ #
   # END YOUR CODE HERE
