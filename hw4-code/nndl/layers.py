@@ -26,7 +26,10 @@ def affine_forward(x, w, b):
   #   of w are D x M, which is the transpose of what we did in earlier 
   #   assignments.
   # ================================================================ #
-
+  x1 = x.reshape(x.shape[0], -1)
+  
+  out =np.dot(x1,w) + b
+  
 
 
   # ================================================================ #
@@ -65,7 +68,12 @@ def affine_backward(dout, cache):
   #   dw should be D x M; it relates to dout through multiplication with x, which is N x D after reshaping
   #   db should be M; it is just the sum over dout examples
   # ================================================================ #
-
+  x1 = x.reshape(x.shape[0], -1) 
+  dw = np.dot(x1.T,dout)
+  dx = np.dot(dout,w.T)
+  dx = dx.reshape(x.shape)
+  db = np.sum(dout,axis=0)
+  
 
   # ================================================================ #
   # END YOUR CODE HERE
@@ -88,7 +96,8 @@ def relu_forward(x):
   # YOUR CODE HERE:
   #   Implement the ReLU forward pass.
   # ================================================================ #
-
+  reLu = lambda x: np.maximum(x, 0)
+  out  = reLu(x)
   # ================================================================ #
   # END YOUR CODE HERE
   # ================================================================ #
@@ -114,7 +123,9 @@ def relu_backward(dout, cache):
   # YOUR CODE HERE:
   #   Implement the ReLU backward pass
   # ================================================================ #
-
+  # ReLU directs linearly to those > 0
+  x1 = x.reshape(x.shape[0], -1)
+  dx = dout * (x1 >= 0)
     
   # ================================================================ #
   # END YOUR CODE HERE
@@ -181,8 +192,21 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     #     (4) Store any variables you may need for the backward pass in
     #         the 'cache' variable.
     # ================================================================ #
+    minibatch_mean = np.mean(x,axis=0)
+    minibatch_var = np.var(x)
 
-    pass
+    running_mean = momentum * running_mean  + (1 -momentum) * minibatch_mean
+    running_var  = momentum *running_var  + (1 - momentum) * minibatch_var
+
+    minibatch_mean = np.expand_dims(minibatch_mean,axis=0)
+    minibatch_var = np.expand_dims(minibatch_var,axis=0)
+
+    norm_x = (x - minibatch_mean)/(np.sqrt(minibatch_var+eps))
+    out = norm_x*gamma + beta
+
+    cache = (minibatch_mean, minibatch_var, norm_x, gamma, beta, x, eps)
+
+
 
     # ================================================================ #
     # END YOUR CODE HERE
@@ -197,7 +221,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     #   Store the output as 'out'.
     # ================================================================ #
 
-    pass
+    norm_x = (x - running_mean)/(np.sqrt(running_var+eps))
+    out = norm_x*gamma + beta
 
     # ================================================================ #
     # END YOUR CODE HERE
@@ -235,6 +260,36 @@ def batchnorm_backward(dout, cache):
   # YOUR CODE HERE:
   #   Implement the batchnorm backward pass, calculating dx, dgamma, and dbeta.
   # ================================================================ #
+  # DIMS
+  # minibatch_mean    D
+  # minibatch_var     D
+  # norm_x            N x D
+  # gamma             D
+  # beta              D
+  # x                 N x D
+  # eps               scalar
+
+
+  minibatch_mean, minibatch_var, norm_x, gamma, beta, x, eps = cache
+
+
+  dbeta =  np.sum(dout,axis= 0)               # D
+  dgamma = np.sum(dout*norm_x,axis=0)         # D
+
+  m = dout.shape[0]                           # N
+  k = 2*(1/m)*(x - minibatch_mean)            # D
+  std = np.sqrt(minibatch_var+eps)            
+  c = 1/std          # 
+  c_sq = 1/(minibatch_var+eps)
+  a = x - minibatch_mean
+  # np.sum((-1.0 / (2*np.power(std,3))))
+  dx = dout*gamma*c + np.sum(-0.5*c*c_sq*gamma*dout*a,axis =0)*k - (1/m)*dout*c*gamma
+
+
+
+
+
+
 
   # ================================================================ #
   # END YOUR CODE HERE

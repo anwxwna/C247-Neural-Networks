@@ -163,14 +163,34 @@ class FullyConnectedNet(object):
     #   weights and biases of layer i are Wi and bi. The
     #   biases are initialized to zero and the weights are initialized
     #   so that each parameter has mean 0 and standard deviation weight_scale.
-    #
-    #   BATCHNORM: Initialize the gammas of each layer to 1 and the beta
-    #   parameters to zero.  The gamma and beta parameters for layer 1 should
-    #   be self.params['gamma1'] and self.params['beta1'].  For layer 2, they
-    #   should be gamma2 and beta2, etc. Only use batchnorm if self.use_batchnorm 
-    #   is true and DO NOT do batch normalize the output scores.
     # ================================================================ #
     
+    for layer_num in range(1,self.num_layers+1):
+      weight_name = "W{}".format(layer_num)
+      bias_name   = "b{}".format(layer_num)
+      print(layer_num)
+      
+      #first layer
+      if layer_num == 1:
+        hidden_dim = hidden_dims[layer_num-1]
+        size_W1 = (input_dim, hidden_dim)
+        self.params[weight_name] = np.random.normal(loc=0.0,scale=weight_scale,size = size_W1)
+        self.params[bias_name] = np.zeros(hidden_dim)
+
+      #output layer
+      elif layer_num == self.num_layers:
+        output_layer = (hidden_dim,num_classes)
+        self.params[weight_name] = np.random.normal(loc=0.0,scale=weight_scale,size = output_layer)
+        self.params[bias_name] = np.zeros(num_classes)
+
+      #middle layers
+      else:
+        hidden_dim = hidden_dims[layer_num-1]
+        size_layer = (hidden_dims[layer_num-2], hidden_dim)
+        self.params[weight_name] = np.random.normal(loc=0.0,scale=weight_scale,size = size_layer)
+        self.params[bias_name] = np.zeros(hidden_dim)
+        
+
 
     # ================================================================ #
     # END YOUR CODE HERE
@@ -222,15 +242,28 @@ class FullyConnectedNet(object):
     # YOUR CODE HERE:
     #   Implement the forward pass of the FC net and store the output
     #   scores as the variable "scores".
-    #
-    #   BATCHNORM: If self.use_batchnorm is true, insert a bathnorm layer
-    #   between the affine_forward and relu_forward layers.  You may
-    #   also write an affine_batchnorm_relu() function in layer_utils.py.
-    #
-    #   DROPOUT: If dropout is non-zero, insert a dropout layer after
-    #   every ReLU layer.
     # ================================================================ #
 
+    H = []
+    H_cache = []
+    for layer_num in range(1,self.num_layers+1):
+      weight_name = "W{}".format(layer_num)
+      bias_name   = "b{}".format(layer_num)
+
+      H_app = None
+      H_cache_app = None
+
+      if layer_num ==1:
+        H_app,H_cache_app = affine_relu_forward(X,self.params[weight_name],self.params[bias_name])
+        H.append(H_app)
+        H_cache.append(H_cache_app)
+      elif layer_num ==self.num_layers:
+        scores,H_cache_app = affine_forward(H[layer_num-2],self.params[weight_name],self.params[bias_name])
+        H_cache.append(H_cache_app)
+      else:
+        H_app,H_cache_app = affine_relu_forward(H[layer_num-2],self.params[weight_name],self.params[bias_name])
+        H.append(H_app)
+        H_cache.append(H_cache_app)
 
     # ================================================================ #
     # END YOUR CODE HERE
@@ -246,16 +279,29 @@ class FullyConnectedNet(object):
     #   Implement the backwards pass of the FC net and store the gradients
     #   in the grads dict, so that grads[k] is the gradient of self.params[k]
     #   Be sure your L2 regularization includes a 0.5 factor.
-    #
-    #   BATCHNORM: Incorporate the backward pass of the batchnorm.
-    #
-    #   DROPOUT: Incorporate the backward pass of dropout.
     # ================================================================ #
+    loss,dLbydZ = softmax_loss(scores,y)
+    dHs = []
 
-
-
+    for layer_num in range(self.num_layers,0,-1):
+      weight_name = "W{}".format(layer_num)
+      bias_name   = "b{}".format(layer_num)
+      loss += 0.5*self.reg*np.sum(self.params[weight_name]*self.params[weight_name])
+   
+      if layer_num ==self.num_layers:
+        dH1, dW,db = affine_backward(dLbydZ,H_cache[layer_num-1])
+        grads[weight_name] = dW + self.reg * self.params[weight_name]
+        grads[bias_name] = db
+        dHs.append(dH1)
+      
+      else:
+        dH1, dW,db = affine_relu_backward(dH1,H_cache[layer_num-1])
+        grads[weight_name] = dW + self.reg * self.params[weight_name]
+        grads[bias_name] = db
+        dHs.append(dH1)
+    
+    
     # ================================================================ #
     # END YOUR CODE HERE
     # ================================================================ #
-    
     return loss, grads
