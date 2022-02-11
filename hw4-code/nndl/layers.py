@@ -276,19 +276,16 @@ def batchnorm_backward(dout, cache):
   dbeta =  np.sum(dout,axis= 0)               # D
   dgamma = np.sum(dout*norm_x,axis=0)         # D
 
-  m = dout.shape[0]                           # N
-  k = 2*(1/m)*(x - minibatch_mean)            # D
+  m = norm_x.shape[0]                           # N
+  k = (1.0/m)                                 # D
   std = np.sqrt(minibatch_var+eps)            
-  c = 1/std          # 
-  c_sq = 1/(minibatch_var+eps)
+  c = 1.0/std                                 # 
+  c_sq = 1.0/(minibatch_var+eps)
   a = x - minibatch_mean
-  # np.sum((-1.0 / (2*np.power(std,3))))
-  dx = dout*gamma*c + np.sum(-0.5*c*c_sq*gamma*dout*a,axis =0)*k - (1/m)*dout*c*gamma
-
-
-
-
-
+  dx_hat = gamma * dout 
+  da = (1.0 / std) * dx_hat 
+  dMu = np.sum(-da,axis=0)
+  dx = dx_hat*c + 2*k*np.sum(-0.5*c*c_sq*dx_hat*a,axis=0)*a + k*dMu
 
 
   # ================================================================ #

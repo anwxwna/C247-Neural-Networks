@@ -168,7 +168,8 @@ class FullyConnectedNet(object):
     for layer_num in range(1,self.num_layers+1):
       weight_name = "W{}".format(layer_num)
       bias_name   = "b{}".format(layer_num)
-      print(layer_num)
+      gamma_name  = "gamma{}".format(layer_num)
+      beta_name   = "beta{}".format(layer_num)
       
       #first layer
       if layer_num == 1:
@@ -176,6 +177,9 @@ class FullyConnectedNet(object):
         size_W1 = (input_dim, hidden_dim)
         self.params[weight_name] = np.random.normal(loc=0.0,scale=weight_scale,size = size_W1)
         self.params[bias_name] = np.zeros(hidden_dim)
+        if self.use_batchnorm:
+          self.params[beta_name]= np.zeros(hidden_dim)
+          self.params[gamma_name]= np.ones(hidden_dim)
 
       #output layer
       elif layer_num == self.num_layers:
@@ -189,6 +193,9 @@ class FullyConnectedNet(object):
         size_layer = (hidden_dims[layer_num-2], hidden_dim)
         self.params[weight_name] = np.random.normal(loc=0.0,scale=weight_scale,size = size_layer)
         self.params[bias_name] = np.zeros(hidden_dim)
+        if self.use_batchnorm:
+          self.params[beta_name]= np.zeros(hidden_dim)
+          self.params[gamma_name]= np.ones(hidden_dim)
         
 
 
@@ -249,21 +256,34 @@ class FullyConnectedNet(object):
     for layer_num in range(1,self.num_layers+1):
       weight_name = "W{}".format(layer_num)
       bias_name   = "b{}".format(layer_num)
+      gamma_name  = "gamma{}".format(layer_num)
+      beta_name   = "beta{}".format(layer_num)
 
       H_app = None
       H_cache_app = None
 
       if layer_num ==1:
-        H_app,H_cache_app = affine_relu_forward(X,self.params[weight_name],self.params[bias_name])
-        H.append(H_app)
-        H_cache.append(H_cache_app)
+        if self.use_batchnorm is False:
+          H_app,H_cache_app = affine_relu_forward(X,self.params[weight_name],self.params[bias_name])
+          H.append(H_app)
+          H_cache.append(H_cache_app)
+        else:
+          H_app,H_cache_app = affine_batchnorm_relu_forward(X,self.params[weight_name],self.params[bias_name],self.params[gamma_name],self.params[beta_name],bn_param)
+          
+          H.append(H_app)
+          H_cache.append(H_cache_app)
       elif layer_num ==self.num_layers:
         scores,H_cache_app = affine_forward(H[layer_num-2],self.params[weight_name],self.params[bias_name])
         H_cache.append(H_cache_app)
       else:
-        H_app,H_cache_app = affine_relu_forward(H[layer_num-2],self.params[weight_name],self.params[bias_name])
-        H.append(H_app)
-        H_cache.append(H_cache_app)
+        if self.use_batchnorm is False:
+          H_app,H_cache_app = affine_relu_forward(H[layer_num-2],self.params[weight_name],self.params[bias_name])
+          H.append(H_app)
+          H_cache.append(H_cache_app)
+        else:
+          H_app,H_cache_app = affine_batchnorm_relu_forward(H[layer_num-2],self.params[weight_name],self.params[bias_name],self.params[gamma_name],self.params[beta_name],bn_param)
+          H.append(H_app)
+          H_cache.append(H_cache_app)
 
     # ================================================================ #
     # END YOUR CODE HERE
@@ -286,19 +306,30 @@ class FullyConnectedNet(object):
     for layer_num in range(self.num_layers,0,-1):
       weight_name = "W{}".format(layer_num)
       bias_name   = "b{}".format(layer_num)
+      gamma_name  = "gamma{}".format(layer_num)
+      beta_name   = "beta{}".format(layer_num)
+
       loss += 0.5*self.reg*np.sum(self.params[weight_name]*self.params[weight_name])
    
       if layer_num ==self.num_layers:
-        dH1, dW,db = affine_backward(dLbydZ,H_cache[layer_num-1])
+        dH1, dW,db = affine_backward(dLbydZ,H_cache[layer_num-1][0:1])
         grads[weight_name] = dW + self.reg * self.params[weight_name]
         grads[bias_name] = db
         dHs.append(dH1)
       
       else:
-        dH1, dW,db = affine_relu_backward(dH1,H_cache[layer_num-1])
-        grads[weight_name] = dW + self.reg * self.params[weight_name]
-        grads[bias_name] = db
-        dHs.append(dH1)
+        if self.use_batchnorm is False:
+          dH1, dW,db = affine_relu_backward(dH1,H_cache[layer_num-1][0:1])
+          grads[weight_name] = dW + self.reg * self.params[weight_name]
+          grads[bias_name] = db
+          dHs.append(dH1)
+        else:
+          dH1, dw, db, dgamma, dbeta = affine_batchnorm_relu_backward(dH1,H_cache[layer_num-1])
+          grads[weight_name] = dw + self.reg * self.params[weight_name]
+          grads[bias_name] = db
+          grads[gamma_name] = dgamma
+          grads[beta_name] = dbeta
+          dHs.append(dH1)
     
     
     # ================================================================ #
