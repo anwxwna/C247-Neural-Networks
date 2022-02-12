@@ -283,9 +283,11 @@ def batchnorm_backward(dout, cache):
   c_sq = 1.0/(minibatch_var+eps)
   a = x - minibatch_mean
   dx_hat = gamma * dout 
-  da = (1.0 / std) * dx_hat 
+  da = c * dx_hat 
   dMu = np.sum(-da,axis=0)
-  dx = dx_hat*c + 2*k*np.sum(-0.5*c*c_sq*dx_hat*a,axis=0)*a + k*dMu
+  dx = c*dx_hat  +  2*k*np.sum((-1.0 / (2*np.power(std,1.5))) * dx_hat * a, axis=0)*a + k*dMu
+
+  
 
 
   # ================================================================ #
@@ -327,8 +329,8 @@ def dropout_forward(x, dropout_param):
     #   Store the masked and scaled activations in out, and store the 
     #   dropout mask as the variable mask.
     # ================================================================ #
-
-    pass
+    mask = (np.random.rand(*x.shape)<p)/(p)
+    out = mask*x
   
     # ================================================================ #
     # END YOUR CODE HERE
@@ -341,7 +343,7 @@ def dropout_forward(x, dropout_param):
     #   Implement the inverted dropout forward pass during test time.
     # ================================================================ #
 
-    pass
+    out =x 
 
     # ================================================================ #
     # END YOUR CODE HERE
@@ -370,7 +372,7 @@ def dropout_backward(dout, cache):
     #   Implement the inverted dropout backward pass during training time.
     # ================================================================ #
 
-    pass
+    dx = mask *dout
 
     # ================================================================ #
     # END YOUR CODE HERE
@@ -381,7 +383,7 @@ def dropout_backward(dout, cache):
     #   Implement the inverted dropout backward pass during test time.
     # ================================================================ #
 
-    pass
+    dx = dout 
 
     # ================================================================ #
     # END YOUR CODE HERE
