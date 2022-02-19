@@ -276,33 +276,22 @@ def batchnorm_backward(dout, cache):
   dbeta =  np.sum(dout,axis= 0)               # D
   dgamma = np.sum(dout*norm_x,axis=0)         # D
 
-  m = norm_x.shape[0]                           # N
-  k = (1.0/m)                                 # D
-  std = np.sqrt(minibatch_var+eps)            
-  c = 1.0/std                                 # 
-  c_sq = 1.0/(minibatch_var+eps)
-  a = x - minibatch_mean
-  dx_hat = gamma * dout 
-  da = c * dx_hat 
-  dMu = np.sum(-da,axis=0)
-  dx = c*dx_hat  +  2*k*np.sum((-1.0 / (2*np.power(std,1.5))) * dx_hat * a, axis=0)*a + k*dMu
+  # m = norm_x.shape[0]                           # N
+  # k = (1.0/m)                                 # D
+  # std = np.sqrt(minibatch_var+eps)            
+  # c = 1.0/std                                 # 
+  # c_sq = 1.0/(minibatch_var+eps)
+  # a = x - minibatch_mean
+  # dx_hat = gamma * dout 
+  # da = c * dx_hat 
+  # dMu = np.sum(-da,axis=0)
+  # dx = c*dx_hat  +  2*k*np.sum((-1.0 / (2*np.power(std,1.5))) * dx_hat * a, axis=0)*a + k*dMu
 
-  # M = norm_x.shape[0]
-  # std = np.sqrt(minibatch_var + eps)             # D
-
-  # # dbeta = dout.sum(axis=0)                            # D
-  # # dgamma = np.sum(norm_x * dout ,axis = 0)           # D
-  # dx_hat = gamma * dout                               # D -- N * D
-  # da = (1.0 / std) * dx_hat                           # D -- N * D                                                     
-  # dMu = np.sum(-da , axis = 0)                        # D 
-  # dVar = np.sum((-1.0 / (2*np.power(std,3))) * dx_hat * (x - minibatch_mean) , axis = 0)         # D
-  # dx = (1.0 / std) * dx_hat + (1.0 / M) * dMu + (2.0 / M ) * dVar * (x - minibatch_mean)          # N * D
-
-  # N = x.shape[0]
+  N = x.shape[0]
   # dbeta = dout.sum(dim = 0)
   # dgamma = (dout * norm_x).sum(dim = 0)
 
-  # dx = gamma / np.sqrt(minibatch_var + eps) * (N * dout - dbeta - norm_x * dgamma) / N
+  dx = gamma / np.sqrt(minibatch_var + eps) * (N * dout - dbeta - norm_x * dgamma) / N
 
   
 
