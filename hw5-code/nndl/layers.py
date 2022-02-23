@@ -193,19 +193,34 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     #     (4) Store any variables you may need for the backward pass in
     #         the 'cache' variable.
     # ================================================================ #
-    minibatch_mean = np.mean(x,axis=0)
-    minibatch_var = np.var(x)
+    # minibatch_mean = np.mean(x,axis=0)
+    # minibatch_var = np.var(x)
 
-    running_mean = momentum * running_mean  + (1 -momentum) * minibatch_mean
-    running_var  = momentum *running_var  + (1 - momentum) * minibatch_var
+    # running_mean = momentum * running_mean  + (1 -momentum) * minibatch_mean
+    # running_var  = momentum *running_var  + (1 - momentum) * minibatch_var
 
-    # minibatch_mean = np.expand_dims(minibatch_mean,axis=0)
-    # minibatch_var = np.expand_dims(minibatch_var,axis=0)
+    # # minibatch_mean = np.expand_dims(minibatch_mean,axis=0)
+    # # minibatch_var = np.expand_dims(minibatch_var,axis=0)
 
-    norm_x = (x - minibatch_mean)/(np.sqrt(minibatch_var+eps))
-    out = norm_x*gamma + beta
+    # norm_x = (x - minibatch_mean)/(np.sqrt(minibatch_var+eps))
+    # out = norm_x*gamma + beta
 
-    cache = (minibatch_mean, minibatch_var, norm_x, gamma, beta, x, eps)
+    # cache = (minibatch_mean, minibatch_var, norm_x, gamma, beta, x, eps)
+
+    sample_mean = np.mean(x, axis=0)
+    sample_var = np.var(x, axis=0)
+    x_norm = (x - sample_mean)/np.sqrt(sample_var + eps)
+    running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+    running_var = momentum * running_var + (1 - momentum) * sample_var
+    out = x_norm*gamma + beta
+    cache = {}
+    cache['sample_mean'] = sample_mean
+    cache['sample_var'] = sample_var
+    cache['x_norm'] = x_norm
+    cache['x'] = x
+    cache['gamma'] = gamma
+    cache['beta'] = beta
+    cache['eps'] = eps
 
 
 
@@ -271,23 +286,29 @@ def batchnorm_backward(dout, cache):
   # eps               scalar
 
 
-  minibatch_mean, minibatch_var, norm_x, gamma, beta, x, eps = cache
-
-
-  dbeta =  np.sum(dout,axis= 0)               # D
-  dgamma = np.sum(dout*norm_x,axis=0)         # D
-
-  m = norm_x.shape[0]                           # N
-  k = (1.0/m)                                 # D
-  std = np.sqrt(minibatch_var+eps)            
-  c = 1.0/std                                 # 
-  c_sq = 1.0/(minibatch_var+eps)
-  a = x - minibatch_mean
-  dx_hat = gamma * dout 
-  da = c * dx_hat 
-  dMu = np.sum(-da,axis=0)
-  dx = c*dx_hat  +  2*k*np.sum((-1.0 / (2*np.power(std,1.5))) * dx_hat * a, axis=0)*a + k*dMu
-
+  # minibatch_mean, minibatch_var, norm_x, gamma, beta, x, eps = cache
+  # dbeta =  np.sum(dout,axis= 0)               # D
+  # dgamma = np.sum(dout*norm_x,axis=0)         # D
+  # m = norm_x.shape[0]                           # N
+  # k = (1.0/m)                                 # D
+  # std = np.sqrt(minibatch_var+eps)            
+  # c = 1.0/std                                 # 
+  # c_sq = 1.0/(minibatch_var+eps)
+  # a = x - minibatch_mean
+  # dx_hat = gamma * dout 
+  # da = c * dx_hat 
+  # dMu = np.sum(-da,axis=0)
+  # dx = c*dx_hat  +  2*k*np.sum((-1.0 / (2*np.power(std,1.5))) * dx_hat * a, axis=0)*a + k*dMu
+  m = dout.shape[0]
+  dx_norm = dout * cache['gamma']
+  dsample_var = np.sum(dx_norm * (cache['x']-cache['sample_mean']) * (-0.5) * (cache['sample_var'] + cache['eps'])**(-1.5),
+  axis=0)
+  dsample_mean = np.sum(dx_norm * (-1/np.sqrt(cache['sample_var'] + cache['eps'])) , axis=0) + dsample_var *((np.sum(-2*(cache['x']-cache['sample_mean']))) / m)
+  dx = dx_norm * (1/np.sqrt(cache['sample_var'] + cache['eps'])) + \
+  dsample_var * (2*(cache['x']-cache['sample_mean'])/m) + \
+  dsample_mean/m
+  dbeta = np.sum(dout, axis=0)
+  dgamma = np.sum(dout * cache['x_norm'], axis=0)
 
   # ================================================================ #
   # END YOUR CODE HERE

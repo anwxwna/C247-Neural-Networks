@@ -211,7 +211,6 @@ def max_pool_backward_naive(dout, cache):
   for i in range(N):
     for j in range(C):
       for h1 in range(h_out):
-        
         for w1 in range(w_out):
           start_h = h1*stride
           start_w = w1*stride
@@ -306,9 +305,9 @@ def spatial_batchnorm_backward(dout, cache):
   
   dx, dgamma, dbeta = batchnorm_backward(dout, cache)
   
-  dx = dx.reshape((N,C,H,W))
-  dgamma = dgamma.reshape((C,))
-  dbeta = dbeta.reshape((C,))
+  dx      = dx.reshape((N,C,H,W))
+  dgamma  = dgamma.reshape((C,))
+  dbeta   = dbeta.reshape((C,))
 
   # ================================================================ #
   # END YOUR CODE HERE
