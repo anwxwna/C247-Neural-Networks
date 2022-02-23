@@ -36,7 +36,29 @@ def conv_forward_naive(x, w, b, conv_param):
   #   Store the output as 'out'.
   #   Hint: to pad the array, you can use the function np.pad.
   # ================================================================ #
-  pass
+  N, C, H, W = x.shape
+  F, _, HH, WW = w.shape
+
+  h_out = int(1 + (H + 2 * pad - HH) / stride) 
+  w_out = int(1 + (W + 2 * pad - WW) / stride) 
+
+  outshape = (N,F,h_out,w_out)
+  out = np.zeros(outshape)
+
+  padding = ((0,0), (0,0), (pad, pad), (pad, pad))
+  x = np.pad(x,pad_width=padding, mode='constant')
+
+
+  for i in np.arange(N):
+    for j in np.arange(F):
+      for h1 in np.arange(h_out):
+        for w1 in np.arange(w_out):
+          start_h = h1*stride
+          start_w = w1*stride
+          filtered_x = x[i ,:, start_h:(start_h+HH) ,start_w:(start_w+WW)]
+          jth_filter = w[j,:,:,:]
+          selected_b = b[j]
+          out[i, j, h1 ,w1] = np.sum(filtered_x*jth_filter) +selected_b
 
   # ================================================================ #
   # END YOUR CODE HERE
@@ -73,7 +95,35 @@ def conv_backward_naive(dout, cache):
   #   Implement the backward pass of a convolutional neural network.
   #   Calculate the gradients: dx, dw, and db.
   # ================================================================ #
-  pass
+  dx = np.zeros(x.shape)
+  dw = np.zeros(w.shape)
+  db = np.zeros(b.shape)
+
+  N, C, H, W = x.shape
+
+  h_out = 1 + (H - f_height) // stride
+  w_out = 1 + (W - f_width) // stride
+
+  
+
+  for i in range(N):
+    for j in range(num_filts):
+      if i ==0:
+        db[j] += np.sum(dout[:,j, : , :])
+      for h1 in range(h_out):
+        start_h = h1*stride
+        for w1 in range(w_out):
+          start_w = w1*stride
+          dout_selected = dout[i,j,h1,w1]
+
+          filtered_x = x[i,:,start_h:(start_h+f_height),start_w:(start_w+f_width)]
+          jth_filter = w[j,:,:,:]  
+
+          dw[j,:,:,:] += filtered_x * dout[i,j,h1,w1]
+          dx[i,:,start_h:(start_h+f_height),start_w:(start_w+f_width)] += jth_filter * dout_selected 
+
+          
+  dx = dx[:, :, pad:-pad, pad:-pad]
 
   # ================================================================ #
   # END YOUR CODE HERE
@@ -99,12 +149,30 @@ def max_pool_forward_naive(x, pool_param):
   """
   out = None
   
+  
   # ================================================================ #
   # YOUR CODE HERE:
   #   Implement the max pooling forward pass.
   # ================================================================ #
+  stride, pool_height, pool_width = [pool_param['stride'], pool_param['pool_height'], pool_param['pool_width']]
+  N, C, H, W = x.shape
+  
 
-  pass
+  h_out = int(1 + (H  - pool_height) / stride) 
+  w_out = int(1 + (W  - pool_width) / stride) 
+
+  outshape = (N,C,h_out,w_out)
+  out = np.zeros(outshape)
+
+  for i in np.arange(N):
+    for j in np.arange(C):
+      for h1 in np.arange(h_out):
+        for w1 in np.arange(w_out):
+          start_h = h1*stride
+          start_w = w1*stride
+
+          pooled_x = x[i ,j, start_h:(start_h+pool_height) ,start_w:(start_w+pool_width)]
+          out[i, j, h1 ,w1] = np.max(pooled_x) 
   # ================================================================ #
   # END YOUR CODE HERE
   # ================================================================ # 
@@ -130,7 +198,29 @@ def max_pool_backward_naive(dout, cache):
   # YOUR CODE HERE:
   #   Implement the max pooling backward pass.
   # ================================================================ #
-  pass
+  dx = np.zeros(x.shape)
+
+
+  N, C, H, W = x.shape
+
+  h_out = 1 + (H - pool_height) // stride
+  w_out = 1 + (W - pool_width) // stride
+
+  
+
+  for i in range(N):
+    for j in range(C):
+      for h1 in range(h_out):
+        
+        for w1 in range(w_out):
+          start_h = h1*stride
+          start_w = w1*stride
+          dout_selected = dout[i,j,h1,w1]
+          filtered_x = x[i,j,start_h:(start_h+pool_height),start_w:(start_w+pool_width)]
+          local_gradient = (filtered_x==np.max(filtered_x))
+
+          dx[i,j,start_h:(start_h+pool_height),start_w:(start_w+pool_width)] += local_gradient * dout_selected
+          
 
   # ================================================================ #
   # END YOUR CODE HERE
@@ -170,7 +260,14 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
   #   implemented in HW #4.
   # ================================================================ #
   
-  pass
+  N, C, H, W = x.shape
+  x = x.reshape((N,H,W,C))
+  x = x.reshape((N*H*W,C))
+
+  out, cache = batchnorm_forward(x, gamma, beta, bn_param)
+  out = out.T 
+  out = out.reshape(C,N,H,W)
+  out = out.swapaxes(0,1)
 
   # ================================================================ #
   # END YOUR CODE HERE
@@ -201,7 +298,17 @@ def spatial_batchnorm_backward(dout, cache):
   #   You may find it useful to use the batchnorm forward pass you 
   #   implemented in HW #4.
   # ================================================================ #
-  pass
+  N, C, H, W = dout.shape
+    
+  dout = dout.swapaxes(0,1)
+  dout = dout.reshape(C,N*H*W)
+  dout = dout.T
+  
+  dx, dgamma, dbeta = batchnorm_backward(dout, cache)
+  
+  dx = dx.reshape((N,C,H,W))
+  dgamma = dgamma.reshape((C,))
+  dbeta = dbeta.reshape((C,))
 
   # ================================================================ #
   # END YOUR CODE HERE

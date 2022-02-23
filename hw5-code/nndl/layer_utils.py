@@ -26,3 +26,20 @@ def affine_relu_backward(dout, cache):
   da = relu_backward(dout, relu_cache)
   dx, dw, db = affine_backward(da, fc_cache)
   return dx, dw, db
+
+
+def affine_batchnorm_relu_forward(x, w, b, gamma, beta, bn_param):
+    
+  aff_out, aff_cache = affine_forward(x, w, b)
+  batch_out, batch_cache = batchnorm_forward(aff_out, gamma, beta, bn_param)
+  out, relu_cache = relu_forward(batch_out)
+  cache = (aff_cache, relu_cache, batch_cache)
+  return out, cache
+
+def affine_batchnorm_relu_backward(dout, cache):
+    
+  aff_cache, relu_cache, batch_cache = cache
+  dbatch = relu_backward(dout, relu_cache)
+  daffine, dgamma, dbeta = batchnorm_backward(dbatch, batch_cache)
+  dx, dw, db = affine_backward(daffine, aff_cache)
+  return dx, dw, db, dgamma, dbeta
